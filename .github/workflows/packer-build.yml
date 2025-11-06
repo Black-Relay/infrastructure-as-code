@@ -1,0 +1,68 @@
+name: Build Packer Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packer/**'
+      - '**.sh'
+      - '.github/workflows/packer-build.yml'
+  workflow_dispatch:
+
+jobs:
+  packer-build:
+    runs-on: ubuntu-latest
+    name: Build Hetzner Image
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+
+      - name: Initialize Packer
+        run: packer init .
+        working-directory: ./packer
+
+      - name: Validate Packer Template
+        run: packer validate .
+        working-directory: ./packer
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+
+      - name: Build Packer Image
+        run: packer build -color=false -machine-readable . | tee build.log
+        working-directory: ./packer
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+
+      - name: Extract Snapshot Info
+        if: success()
+        id: snapshot
+        run: |
+          SNAPSHOT_ID=$(grep 'artifact,0,id' build.log | cut -d, -f6 | cut -d: -f2)
+          SNAPSHOT_NAME=$(grep 'artifact,0,string' build.log | cut -d, -f6)
+          echo "snapshot_id=$SNAPSHOT_ID" >> $GITHUB_OUTPUT
+          echo "snapshot_name=$SNAPSHOT_NAME" >> $GITHUB_OUTPUT
+          echo "### ✅ Packer Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "**Snapshot ID:** $SNAPSHOT_ID" >> $GITHUB_STEP_SUMMARY
+          echo "**Snapshot Name:** $SNAPSHOT_NAME" >> $GITHUB_STEP_SUMMARY
+        working-directory: ./packer
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packer-build-log
+          path: packer/build.log
+          retention-days: 30
+
+      - name: Notify Build Failure
+        if: failure()
+        run: |
+          echo "### ❌ Packer Build Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs for details" >> $GITHUB_STEP_SUMMARY
