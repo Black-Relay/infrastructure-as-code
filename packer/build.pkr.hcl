@@ -22,7 +22,7 @@ source "hcloud" "docker" {
   location    = "hel1"
   image       = "ubuntu-24.04"
   server_type = "cx33"
-  server_name = "black-relay-{{ timestamp }}"
+  server_name = "black-relay"
 
   user_data = <<-EOF
     #cloud-config
