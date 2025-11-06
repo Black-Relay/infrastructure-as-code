@@ -80,7 +80,7 @@ resource "hcloud_firewall" "firewall" {
 resource "hcloud_server" "from_snapshot" {
   name        = "black-relay"
   image       = data.hcloud_image.packer_snapshot.id
-  server_type = "cx22"
+  server_type = "cx33"
 firewall_ids = [hcloud_firewall.firewall.id]
   ssh_keys = [ data.hcloud_ssh_key.Josh-Noll.name, data.hcloud_ssh_key.EOS-Desktop.name  ]
   public_net {
