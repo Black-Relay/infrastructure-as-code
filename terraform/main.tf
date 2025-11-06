@@ -38,7 +38,7 @@ data "hcloud_ssh_key" "EOS-Desktop" {
 }
 
 resource "hcloud_firewall" "firewall" {
-  name = "Black Relay Firewall"
+  name = "Black Relay VPS Firewall"
   rule {
     direction = "in"
     protocol  = "tcp"
