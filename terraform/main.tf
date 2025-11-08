@@ -37,6 +37,10 @@ data "hcloud_ssh_key" "EOS-Desktop" {
   name = "robbie@EOS-Desktop"
 }
 
+data "hcloud_ssh_key" "Dell-XPS" {
+  name = "robbie@Robbie-Dell-XPS"
+}
+
 resource "hcloud_firewall" "firewall" {
   name = "Black Relay VPS Firewall"
   rule {
@@ -76,13 +80,55 @@ resource "hcloud_firewall" "firewall" {
 
 }
 
+locals {
+  cloud_init = <<-EOT
+    #cloud-config
+    users:
+      - name: josh
+        groups: sudo, docker
+        shell: /bin/bash
+        sudo: ['ALL=(ALL) NOPASSWD:ALL']
+        ssh_authorized_keys:
+          - ${data.hcloud_ssh_key.Josh-Noll.public_key}
+      - name: robbie
+        groups: sudo, docker
+        shell: /bin/bash
+        sudo: ['ALL=(ALL) NOPASSWD:ALL']
+        ssh_authorized_keys:
+          - ${data.hcloud_ssh_key.EOS-Desktop.public_key}
+          - ${data.hcloud_ssh_key.Robbie-Dell.public_key}
+    
+    ssh_pwauth: false
+    disable_root: false
+    
+    write_files:
+      - path: /etc/ssh/sshd_config.d/99-hardening.conf
+        content: |
+          PermitRootLogin no
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          KbdInteractiveAuthentication no
+          ChallengeResponseAuthentication no
+          MaxAuthTries 3
+          AllowTcpForwarding no
+          X11Forwarding no
+          AllowAgentForwarding no
+          AuthorizedKeysFile .ssh/authorized_keys
+          AllowUsers josh robbie
+        permissions: '0644'
+    
+    runcmd:
+      - systemctl restart sshd
+  EOT
+}
+
 
 resource "hcloud_server" "from_snapshot" {
   name        = "black-relay"
   image       = data.hcloud_image.packer_snapshot.id
   server_type = "cx33"
-firewall_ids = [hcloud_firewall.firewall.id]
-  ssh_keys = [ data.hcloud_ssh_key.Josh-Noll.name, data.hcloud_ssh_key.EOS-Desktop.name  ]
+  firewall_ids = [hcloud_firewall.firewall.id]
+  user_data = local.cloud_init
   public_net {
     ipv4_enabled = true
     ipv6_enabled = true
