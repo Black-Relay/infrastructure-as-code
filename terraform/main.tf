@@ -96,7 +96,7 @@ locals {
         sudo: ['ALL=(ALL) NOPASSWD:ALL']
         ssh_authorized_keys:
           - ${data.hcloud_ssh_key.EOS-Desktop.public_key}
-          - ${data.hcloud_ssh_key.Robbie-Dell.public_key}
+          - ${data.hcloud_ssh_key.Dell-XPS.public_key}
     
     ssh_pwauth: false
     disable_root: false
